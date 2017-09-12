@@ -12,7 +12,7 @@ const BASELENGTH=2048
         if 2*prod(dims) <= BASELENGTH
             add_micro!(α, A, β, C, dims, offsetA, offsetC)
         else
-            dmax = _indmax(_memjumps(dims, minstrides))
+            dmax = indmax(_memjumps(dims, minstrides))
             @dividebody $N dmax dims offsetA A offsetC C begin
                 add_rec!(α, A, β, C, dims, offsetA, offsetC, minstrides)
             end begin
@@ -28,7 +28,7 @@ end
         if prod(dims) + prod(_filterdims(dims,C)) <= BASELENGTH
             trace_micro!(α, A, β, C, dims, offsetA, offsetC)
         else
-            dmax = _indmax(_memjumps(dims, minstrides))
+            dmax = indmax(_memjumps(dims, minstrides))
             @dividebody $N dmax dims offsetA A offsetC C begin
                 trace_rec!(α, A, β, C, dims, offsetA, offsetC, minstrides)
             end begin
@@ -58,11 +58,11 @@ end
             contract_micro!(α, A, B, β, C, dims, offsetA, offsetB, offsetC)
         else
             if clength > oAlength && clength > oBlength
-                dmax = _indmax(_memjumps(cdims, minstrides))
+                dmax = indmax(_memjumps(cdims, minstrides))
             elseif oAlength > oBlength
-                dmax = _indmax(_memjumps(odimsA, minstrides))
+                dmax = indmax(_memjumps(odimsA, minstrides))
             else
-                dmax = _indmax(_memjumps(odimsB, minstrides))
+                dmax = indmax(_memjumps(odimsB, minstrides))
             end
             @dividebody $N dmax dims offsetA A offsetB B offsetC C begin
                     contract_rec!(α, A, B, β, C, dims, offsetA, offsetB, offsetC, minstrides)

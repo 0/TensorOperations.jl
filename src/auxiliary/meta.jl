@@ -2,27 +2,29 @@
 #
 # A bunch of auxiliary metaprogramming tools and generated functions
 
-@generated function _strides{T,N}(A::StridedArray{T,N})
-    meta = Expr(:meta,:inline)
-    ex = Expr(:tuple,[:(stride(A,$d)) for d = 1:N]...)
-    Expr(:block, meta, ex)
-end
+import Base.tail
 
-@generated function _indmax{N,T}(values::NTuple{N,T})
-    meta = Expr(:meta,:inline)
-    Expr(:block, meta, :(dmax = 1), :(max = values[1]), [:(values[$d] > max && (dmax = $d; max = values[$d])) for d = 2:N]..., :(return dmax))
-end
+# OK up to N=15
+_permute(t::NTuple{N,T} where {N,T}, p) = __permute((), t, p)
+@inline __permute(tdst::NTuple{N,T}, tsrc::NTuple{N,T}, p) where {N,T} = tdst
+@inline __permute(tdst::NTuple{N1,T}, tsrc::NTuple{N2,T}, p) where {N1,N2,T} = __permute(tuple(tdst..., tsrc[p[N1+1]]), tsrc, p)
 
-@generated function _permute{T,N}(t::NTuple{N,T}, p)
-    meta = Expr(:meta,:inline)
-    ex = Expr(:tuple,[:(t[p[$d]]) for d = 1:N]...)
-    Expr(:block, meta, ex)
-end
+# OK up to N=14
+_memjumps(dims::Tuple{}, strides::Tuple{}) = ()
+_memjumps(dims::NTuple{N,Int}, strides::NTuple{N,Int}) where {N} = tuple((dims[1]-1)*strides[1], _memjumps(tail(dims), tail(strides))...)
 
-@generated function _memjumps{N}(dims::NTuple{N,Int},strides::NTuple{N,Int})
-    meta = Expr(:meta,:inline)
-    ex = Expr(:tuple,[:((dims[$d]-1)*strides[$d]) for d = 1:N]...)
-    Expr(:block, meta, ex)
+# inferrable and fast up to N = 14, slow afterwards
+function _invperm(p::NTuple{N,T}) where {N,T<:Integer}
+    ip = ntuple(n->T(n),Val{N})
+    __swapsort(ip, p, 1)
+end
+@inline __swapsort(ip::Tuple{}, p::Tuple{}, k) = ()
+@inline function __swapsort(ip::NTuple{N,Integer}, p::NTuple{N,Integer}, k) where {N}
+    while p[1] != k
+        p = tuple(tail(p)..., p[1])
+        ip = tuple(tail(ip)..., ip[1])
+    end
+    tuple(ip[1], __swapsort(tail(ip), tail(p), k+1)...)
 end
 
 # Based on Tim Holy's Cartesian
